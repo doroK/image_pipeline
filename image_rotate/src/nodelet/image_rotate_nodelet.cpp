@@ -54,7 +54,6 @@
 #include <dynamic_reconfigure/server.h>
 #include <math.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <visualization_msgs/MarkerArray.h>
 
 namespace image_rotate {
 class ImageRotateNodelet : public nodelet::Nodelet
@@ -62,8 +61,6 @@ class ImageRotateNodelet : public nodelet::Nodelet
   tf2_ros::Buffer tf_buffer_;
   boost::shared_ptr<tf2_ros::TransformListener> tf_sub_;
   tf2_ros::TransformBroadcaster tf_pub_;
-
-  ros::Publisher debug_source_pub, debug_target_pub, debug_transform_pub;
 
   image_rotate::ImageRotateConfig config_;
   dynamic_reconfigure::Server<image_rotate::ImageRotateConfig> srv;
@@ -129,111 +126,12 @@ class ImageRotateNodelet : public nodelet::Nodelet
       geometry_msgs::TransformStamped transform = tf_buffer_.lookupTransform(input_frame_id, config_.target_frame_id, msg->header.stamp);
       tf2::doTransform(target_vector_, target_vector_transformed, transform);
 
-{
-      visualization_msgs::MarkerArray marker_array;
-              visualization_msgs::Marker marker;
-              marker.header.stamp = ros::Time::now();
-              marker.header.frame_id =config_.target_frame_id;
-              marker.type = 8;//visualization_msgs::Marker::SPHERE_LIST;
-              marker.action = visualization_msgs::Marker::ADD;
-              marker.color.r= 0;
-              marker.color.g= 0;
-              marker.color.b= 1;
-              marker.color.a = 1.0;
-              marker.scale.x = 0.02;
-              marker.scale.y = 0.02;
-              marker.scale.z = 0.02;
-              marker.ns ="";
-              marker.action = visualization_msgs::Marker::ADD;
-              marker.pose.orientation.w = 1.0;
-              std::vector<geometry_msgs::Point> point_vector;
-              geometry_msgs::Point point;
-
-
-              for(float i=0; i<=1; i+=0.05) {
-              point.x=target_vector_transformed.vector.x*i;
-              point.y=target_vector_transformed.vector.y*i;
-              point.z=target_vector_transformed.vector.z*i;
-              point_vector.push_back(point);
-                }
-              marker.points=point_vector;
-              marker_array.markers.push_back(marker);
-
-      debug_target_pub.publish(marker_array);
-      }
-
-      {
-            visualization_msgs::MarkerArray marker_array;
-                    visualization_msgs::Marker marker;
-                    marker.header.stamp = ros::Time::now();
-                    marker.header.frame_id =input_frame_id;
-                    marker.type = 8;//visualization_msgs::Marker::SPHERE_LIST;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.color.r= 0.5;
-                    marker.color.g= 0.5;
-                    marker.color.b= 1;
-                    marker.color.a = 1.0;
-                    marker.scale.x = 0.02;
-                    marker.scale.y = 0.02;
-                    marker.scale.z = 0.02;
-                    marker.ns ="";
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.pose.orientation.w = 1.0;
-                    std::vector<geometry_msgs::Point> point_vector;
-                    geometry_msgs::Point point;
-
-
-                    for(float i=0; i<=1; i+=0.05) {
-                    point.x=target_vector_transformed.vector.x*i;
-                    point.y=target_vector_transformed.vector.y*i;
-                    point.z=target_vector_transformed.vector.z*i;
-                    point_vector.push_back(point);
-                      }
-                    marker.points=point_vector;
-                    marker_array.markers.push_back(marker);
-
-            debug_transform_pub.publish(marker_array);
-            }
-
       // Transform the source vector into the image frame.
       source_vector_.header.stamp = msg->header.stamp;
       source_vector_.header.frame_id = frameWithDefault(config_.source_frame_id, input_frame_id);
       geometry_msgs::Vector3Stamped source_vector_transformed;
       transform = tf_buffer_.lookupTransform(config_.source_frame_id, input_frame_id, msg->header.stamp);
       tf2::doTransform(source_vector_, source_vector_transformed, transform);
-
-{
-      visualization_msgs::MarkerArray marker_array;
-              visualization_msgs::Marker marker;
-              marker.header.stamp = ros::Time::now();
-              marker.header.frame_id =config_.source_frame_id;
-              marker.type = 8;//visualization_msgs::Marker::SPHERE_LIST;
-              marker.action = visualization_msgs::Marker::ADD;
-              marker.color.r= 0;
-              marker.color.g= 1;
-              marker.color.b= 0;
-              marker.color.a = 1.0;
-              marker.scale.x = 0.02;
-              marker.scale.y = 0.02;
-              marker.scale.z = 0.02;
-              marker.ns ="";
-              marker.action = visualization_msgs::Marker::ADD;
-              marker.pose.orientation.w = 1.0;
-              std::vector<geometry_msgs::Point> point_vector;
-              geometry_msgs::Point point;
-
-
-              for(float i=0; i<=1; i+=0.05) {
-              point.x=source_vector_transformed.vector.x*i;
-              point.y=source_vector_transformed.vector.y*i;
-              point.z=source_vector_transformed.vector.z*i;
-              point_vector.push_back(point);
-                }
-                  point_vector.push_back(point);
-              marker.points=point_vector;
-              marker_array.markers.push_back(marker);
-
-      debug_source_pub.publish(marker_array);}
 
       //NODELET_INFO("target: %f %f %f", target_vector_.x(), target_vector_.y(), target_vector_.z());
       //NODELET_INFO("target_transformed: %f %f %f", target_vector_transformed.x(), target_vector_transformed.y(), target_vector_transformed.z());
@@ -371,10 +269,6 @@ public:
     image_transport::SubscriberStatusCallback connect_cb    = boost::bind(&ImageRotateNodelet::connectCb, this, _1);
     image_transport::SubscriberStatusCallback disconnect_cb = boost::bind(&ImageRotateNodelet::disconnectCb, this, _1);
     img_pub_ = image_transport::ImageTransport(ros::NodeHandle(nh_, "rotated")).advertise("image", 1, connect_cb, disconnect_cb);
-
-    debug_source_pub = nh_.advertise<visualization_msgs::MarkerArray>("/img_rotate_debug/source", 2);
-    debug_target_pub = nh_.advertise<visualization_msgs::MarkerArray>("/img_rotate_debug/target", 2);
-    debug_transform_pub = nh_.advertise<visualization_msgs::MarkerArray>("/img_rotate_debug/transform", 2);
 
     dynamic_reconfigure::Server<image_rotate::ImageRotateConfig>::CallbackType f =
       boost::bind(&ImageRotateNodelet::reconfigureCallback, this, _1, _2);
